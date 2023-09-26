@@ -7,13 +7,11 @@
 - [Background Information](#background-information)
 - [Project Goals and Objectives](#project-goals-and-objectives)
 - [Methods](#methods)
-- [Expected Results](#expected-results)
-- [Project Work Plan and Timeline](#project-work-plan-and-timeline)
+- [Expected Impacts](#expected-impacts)
 - [Getting Started](#getting-started)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
+- [Contributors' Contact](#contributors-contacts)
 
 ## Introduction
 
@@ -39,7 +37,7 @@ Xpire caters to a diverse range of individuals, each with unique needs and motiv
 
 [Soon]
 
-## Expected Results
+## Expected Impacts
 
 [Soon]
 
@@ -72,12 +70,12 @@ We welcome contributions from the open-source community. If you'd like to contri
 
 ## Contributors' Contacts
 
-Fattah
+### Fattah
 *   [LinkedIn](https://www.linkedin.com/in/muhammad24fattah/)
 *   [Email](fattahmuhammad666@gmail.com)
-Dzikri
+### Dzikri
 *   LinkedIn
 *   [Email](dzkri.ardfi@gmail.com)
-Indra
+### Indra
 *   LinkedIn
 *   [Email](indraakmal08@gmail.com) 
