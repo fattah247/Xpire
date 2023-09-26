@@ -64,8 +64,6 @@ We welcome contributions from the open-source community. If you'd like to contri
 5. Push your changes to your forked repository.
 6. Submit a pull request to the main repository.
 
-## License
-
 ---
 
 ## Contributors' Contacts
