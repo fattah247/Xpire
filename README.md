@@ -1,4 +1,4 @@
-# Xpire: Make Every Day Counts
+# Xpire
 
 ## Table of Contents
 - [Introduction](#introduction)
