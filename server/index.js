@@ -6,7 +6,8 @@ import crypto from "node:crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DEFAULT_DATA_FILE = path.join(__dirname, "data", "items.json");
+const DEFAULT_DATA_FILE = path.join(__dirname, "data", "runtime", "items.json");
+const DEFAULT_SEED_FILE = path.join(__dirname, "data", "seed-items.json");
 
 function startOfDay(dateLike) {
   const date = new Date(dateLike);
@@ -37,7 +38,7 @@ function normalizeItem(input, now = new Date()) {
     throw new Error("expiresOn must be a valid ISO date value");
   }
 
-  if (!input.name || typeof input.name !== "string") {
+  if (!input.name || typeof input.name !== "string" || input.name.trim().length === 0) {
     throw new Error("name is required");
   }
 
@@ -57,7 +58,24 @@ function normalizeItem(input, now = new Date()) {
   };
 }
 
-export function createJsonStore(filePath = DEFAULT_DATA_FILE) {
+async function loadSeedItems(seedFile) {
+  try {
+    const content = await fs.readFile(seedFile, "utf8");
+    const parsed = JSON.parse(content);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map((item) => normalizeItem(item, new Date(item.createdAt ?? Date.now())));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export function createJsonStore(filePath = DEFAULT_DATA_FILE, options = {}) {
+  const seedFile = options.seedFile ?? DEFAULT_SEED_FILE;
   let items = [];
 
   async function ensureLoaded() {
@@ -67,7 +85,7 @@ export function createJsonStore(filePath = DEFAULT_DATA_FILE) {
       items = Array.isArray(parsed) ? parsed : [];
     } catch (error) {
       if (error.code === "ENOENT") {
-        items = [];
+        items = await loadSeedItems(seedFile);
         await persist();
         return;
       }
@@ -160,6 +178,12 @@ export function createApp({ store, now = () => new Date() }) {
 
   app.get("/api/items", (req, res) => {
     const statusFilter = (req.query.status ?? "all").toString().toLowerCase();
+    const allowedStatuses = new Set(["all", "fresh", "expiring", "expired"]);
+    if (!allowedStatuses.has(statusFilter)) {
+      res.status(400).json({ error: "status must be one of: all, fresh, expiring, expired" });
+      return;
+    }
+
     const allItems = store
       .list()
       .map((item) => toApiItem(item, now()))
@@ -210,7 +234,8 @@ export function createApp({ store, now = () => new Date() }) {
 export async function startServer() {
   const port = Number(process.env.PORT ?? 4000);
   const dataFile = process.env.XPIRE_DATA_FILE ?? DEFAULT_DATA_FILE;
-  const store = createJsonStore(dataFile);
+  const seedFile = process.env.XPIRE_SEED_FILE ?? DEFAULT_SEED_FILE;
+  const store = createJsonStore(dataFile, { seedFile });
   await store.init();
 
   const app = createApp({ store });

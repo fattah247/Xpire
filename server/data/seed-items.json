@@ -1,0 +1,22 @@
+[
+  {
+    "id": "seed-milk",
+    "name": "Milk",
+    "category": "dairy",
+    "quantity": 1,
+    "expiresOn": "2030-01-02T00:00:00.000Z",
+    "notes": "Keep at 4C or below",
+    "createdAt": "2030-01-01T08:00:00.000Z",
+    "updatedAt": "2030-01-01T08:00:00.000Z"
+  },
+  {
+    "id": "seed-apple",
+    "name": "Apple",
+    "category": "produce",
+    "quantity": 6,
+    "expiresOn": "2030-01-10T00:00:00.000Z",
+    "notes": "Pantry basket",
+    "createdAt": "2030-01-01T08:00:00.000Z",
+    "updatedAt": "2030-01-01T08:00:00.000Z"
+  }
+]
