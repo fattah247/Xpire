@@ -4,7 +4,7 @@ Xpire helps households track perishable items, highlight what will expire soon, 
 
 ## Stack
 
-- `client/`: React dashboard for item management.
+- `client/`: Vite + React dashboard for item management.
 - `server/`: Express API with JSON-file persistence.
 
 ## API Endpoints
@@ -41,11 +41,11 @@ npm --prefix server start
 Start web app (new terminal):
 
 ```bash
-npm --prefix client start
+npm --prefix client dev
 ```
 
 By default, the client calls `http://localhost:4000`.  
-Override with `REACT_APP_API_URL`.
+Override with `VITE_API_URL`.
 
 ### Data Storage
 
@@ -69,11 +69,11 @@ npm --prefix server test
 Client unit tests:
 
 ```bash
-CI=true npm --prefix client test -- --watchAll=false
+npm --prefix client test
 ```
 
 Client production build:
 
 ```bash
-CI=true npm --prefix client run build
+npm --prefix client run build
 ```
