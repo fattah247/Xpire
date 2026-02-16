@@ -39,6 +39,14 @@ npm --prefix client start
 By default, the client calls `http://localhost:4000`.  
 Override with `REACT_APP_API_URL`.
 
+### Data Storage
+
+- Runtime data is persisted to `server/data/runtime/items.json` (git-ignored).
+- Initial seed data is loaded from `server/data/seed-items.json` when runtime data does not exist.
+- Optional environment overrides:
+  - `XPIRE_DATA_FILE`: custom runtime file path.
+  - `XPIRE_SEED_FILE`: custom seed file path.
+
 ## Validation Commands
 
 Server smoke tests:

@@ -52,8 +52,12 @@ test("health endpoint and item CRUD flow", async (t) => {
 
   const list = await requestJson(`${base}/api/items`);
   assert.equal(list.response.status, 200);
-  assert.equal(list.json.total, 1);
-  assert.equal(list.json.items[0].id, id);
+  assert.ok(list.json.total >= 1);
+  assert.ok(list.json.items.some((item) => item.id === id));
+
+  const badFilter = await requestJson(`${base}/api/items?status=soon`);
+  assert.equal(badFilter.response.status, 400);
+  assert.match(badFilter.json.error, /status must be one of/i);
 
   const patch = await requestJson(`${base}/api/items/${id}`, {
     method: "PATCH",
