@@ -8,11 +8,52 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_DATA_FILE = path.join(__dirname, "data", "runtime", "items.json");
 const DEFAULT_SEED_FILE = path.join(__dirname, "data", "seed-items.json");
+const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
 
 function startOfDay(dateLike) {
   const date = new Date(dateLike);
   date.setHours(0, 0, 0, 0);
   return date;
+}
+
+function parsePositiveInt(raw, fallback) {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeString(input, { fallback = "", maxLength = 120, lowercase = false } = {}) {
+  const value = (input ?? fallback).toString().trim();
+  const limited = value.slice(0, maxLength);
+  return lowercase ? limited.toLowerCase() : limited;
+}
+
+function parseAllowedOrigins(raw) {
+  if (!raw) {
+    return DEFAULT_ALLOWED_ORIGINS;
+  }
+  return raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function createRateLimiter({
+  windowMs = 60_000,
+  maxRequests = 180,
+} = {}) {
+  const buckets = new Map();
+  return (ip, nowMs = Date.now()) => {
+    const current = buckets.get(ip);
+    if (!current || nowMs - current.windowStartMs >= windowMs) {
+      buckets.set(ip, { windowStartMs: nowMs, count: 1 });
+      return { allowed: true, remaining: maxRequests - 1 };
+    }
+    if (current.count >= maxRequests) {
+      return { allowed: false, remaining: 0 };
+    }
+    current.count += 1;
+    return { allowed: true, remaining: maxRequests - current.count };
+  };
 }
 
 function daysUntil(expiryDate, now = new Date()) {
@@ -33,26 +74,32 @@ export function itemStatus(expiryDate, now = new Date()) {
 }
 
 function normalizeItem(input, now = new Date()) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("item payload must be a JSON object");
+  }
+
   const expiresOn = new Date(input.expiresOn);
   if (Number.isNaN(expiresOn.getTime())) {
     throw new Error("expiresOn must be a valid ISO date value");
   }
 
-  if (!input.name || typeof input.name !== "string" || input.name.trim().length === 0) {
+  const name = normalizeString(input.name, { fallback: "", maxLength: 80 });
+  if (!name) {
     throw new Error("name is required");
   }
 
-  const quantity = Number.isFinite(Number(input.quantity))
-    ? Number(input.quantity)
+  const quantityInput = Number(input.quantity);
+  const quantity = Number.isFinite(quantityInput)
+    ? Math.max(1, Math.min(999, Math.round(quantityInput)))
     : 1;
 
   return {
     id: input.id ?? crypto.randomUUID(),
-    name: input.name.trim(),
-    category: (input.category ?? "general").toString().trim().toLowerCase(),
-    quantity: quantity > 0 ? quantity : 1,
+    name,
+    category: normalizeString(input.category, { fallback: "general", maxLength: 40, lowercase: true }),
+    quantity,
     expiresOn: startOfDay(expiresOn).toISOString(),
-    notes: (input.notes ?? "").toString().trim(),
+    notes: normalizeString(input.notes, { fallback: "", maxLength: 240 }),
     createdAt: input.createdAt ?? now.toISOString(),
     updatedAt: now.toISOString(),
   };
@@ -152,12 +199,50 @@ function toApiItem(item, now = new Date()) {
   };
 }
 
-export function createApp({ store, now = () => new Date() }) {
+export function createApp({
+  store,
+  now = () => new Date(),
+  allowedOrigins = parseAllowedOrigins(process.env.XPIRE_ALLOWED_ORIGINS),
+  rateLimitWindowMs = parsePositiveInt(process.env.XPIRE_RATE_LIMIT_WINDOW_MS, 60_000),
+  rateLimitMax = parsePositiveInt(process.env.XPIRE_RATE_LIMIT_MAX_REQUESTS, 180),
+} = {}) {
   const app = express();
-  app.use(express.json());
+  const limiter = createRateLimiter({ windowMs: rateLimitWindowMs, maxRequests: rateLimitMax });
+
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "25kb" }));
+  app.use((req, res, next) => {
+    req.requestId = crypto.randomUUID();
+    res.setHeader("X-Request-Id", req.requestId);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    next();
+  });
 
   app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const identifier = req.ip ?? req.socket.remoteAddress ?? "unknown";
+    const result = limiter(identifier);
+    res.setHeader("X-RateLimit-Limit", String(rateLimitMax));
+    res.setHeader("X-RateLimit-Remaining", String(result.remaining));
+    if (!result.allowed) {
+      res.status(429).json({ error: "Too many requests" });
+      return;
+    }
+    next();
+  });
+
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      const allowed = allowedOrigins.includes(origin);
+      if (!allowed) {
+        res.status(403).json({ error: "Origin is not allowed" });
+        return;
+      }
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     if (req.method === "OPTIONS") {
@@ -226,6 +311,18 @@ export function createApp({ store, now = () => new Date() }) {
       return;
     }
     res.status(204).end();
+  });
+
+  app.use((error, _req, res, _next) => {
+    if (error?.type === "entity.too.large") {
+      res.status(413).json({ error: "Request body too large" });
+      return;
+    }
+    if (error instanceof SyntaxError) {
+      res.status(400).json({ error: "Malformed JSON body" });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
   });
 
   return app;

@@ -19,7 +19,7 @@ test("health endpoint and item CRUD flow", async (t) => {
 
   const store = createJsonStore(dataPath);
   await store.init();
-  const app = createApp({ store });
+  const app = createApp({ store, allowedOrigins: ["http://localhost:3000"] });
 
   const server = app.listen(0);
   await new Promise((resolve) => server.once("listening", resolve));
@@ -34,6 +34,8 @@ test("health endpoint and item CRUD flow", async (t) => {
   const health = await requestJson(`${base}/health`);
   assert.equal(health.response.status, 200);
   assert.equal(health.json.status, "ok");
+  assert.ok(health.response.headers.get("x-request-id"));
+  assert.equal(health.response.headers.get("x-content-type-options"), "nosniff");
 
   const create = await requestJson(`${base}/api/items`, {
     method: "POST",
@@ -58,6 +60,32 @@ test("health endpoint and item CRUD flow", async (t) => {
   const badFilter = await requestJson(`${base}/api/items?status=soon`);
   assert.equal(badFilter.response.status, 400);
   assert.match(badFilter.json.error, /status must be one of/i);
+
+  const invalidBody = await requestJson(`${base}/api/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: "",
+      expiresOn: "2030-01-01",
+    }),
+  });
+  assert.equal(invalidBody.response.status, 400);
+  assert.match(invalidBody.json.error, /name is required/i);
+
+  const malformed = await fetch(`${base}/api/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{invalid",
+  });
+  const malformedJson = await malformed.json();
+  assert.equal(malformed.status, 400);
+  assert.match(malformedJson.error, /malformed json/i);
+
+  const blockedOrigin = await requestJson(`${base}/api/items`, {
+    headers: { Origin: "https://evil.example" },
+  });
+  assert.equal(blockedOrigin.response.status, 403);
+  assert.match(blockedOrigin.json.error, /origin is not allowed/i);
 
   const patch = await requestJson(`${base}/api/items/${id}`, {
     method: "PATCH",
