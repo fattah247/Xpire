@@ -15,6 +15,14 @@ Xpire helps households track perishable items, highlight what will expire soon, 
 - `PATCH /api/items/:id`: update an item.
 - `DELETE /api/items/:id`: remove an item.
 
+## Production Hardening Included
+
+- Request-size limit and malformed JSON handling.
+- CORS allowlist with explicit origin enforcement.
+- IP-based in-memory rate limiting headers + 429 protection.
+- Security response headers (`nosniff`, `X-Frame-Options`, `Referrer-Policy`).
+- Stronger item normalization and field length caps.
+
 ## Run Locally
 
 Install dependencies:
@@ -46,6 +54,9 @@ Override with `REACT_APP_API_URL`.
 - Optional environment overrides:
   - `XPIRE_DATA_FILE`: custom runtime file path.
   - `XPIRE_SEED_FILE`: custom seed file path.
+  - `XPIRE_ALLOWED_ORIGINS`: comma-separated CORS allowlist.
+  - `XPIRE_RATE_LIMIT_WINDOW_MS`: request rate-limit window in milliseconds.
+  - `XPIRE_RATE_LIMIT_MAX_REQUESTS`: max requests per window and IP.
 
 ## Validation Commands
 
