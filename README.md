@@ -1,79 +1,60 @@
 # Xpire
 
-## Table of Contents
-- [Introduction](#introduction)
-- [Problem Statement](#problem-statement)
-- [Audience / Target User Group](#audience--target-user-group)
-- [Background Information](#background-information)
-- [Project Goals and Objectives](#project-goals-and-objectives)
-- [Methods](#methods)
-- [Expected Impacts](#expected-impacts)
-- [Getting Started](#getting-started)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributors' Contact](#contributors-contacts)
+Xpire helps households track perishable items, highlight what will expire soon, and remove stale inventory quickly.
 
-## Introduction
+## Stack
 
-Xpire is a user-friendly web application designed to combat food waste and promote sustainable food consumption. This README provides an overview of the project, its goals, and instructions for getting started and contributing.
+- `client/`: React dashboard for item management.
+- `server/`: Express API with JSON-file persistence.
 
-## Problem Statement
+## API Endpoints
 
-Food waste is a global issue with significant environmental, economic, and social consequences. Xpire aims to address this problem by helping individuals manage their food inventory and reduce waste through timely reminders and user-friendly features.
+- `GET /health`: service heartbeat.
+- `GET /api/items?status=all|fresh|expiring|expired`: list items with computed status and days left.
+- `POST /api/items`: create an item.
+- `PATCH /api/items/:id`: update an item.
+- `DELETE /api/items/:id`: remove an item.
 
-## Audience / Target User Group
+## Run Locally
 
-Xpire caters to a diverse range of individuals, each with unique needs and motivations, including parents, working professionals, health-conscious individuals, eco-conscious consumers, small-scale food businesses, students, and seniors. The application offers tailored features to meet the specific requirements of these user segments.
+Install dependencies:
 
-## Background Information
+```bash
+npm ci --prefix server
+npm ci --prefix client
+```
 
-[Soon]
+Start API:
 
-## Project Goals and Objectives
+```bash
+npm --prefix server start
+```
 
-- **Project Goal:** Develop a user-friendly web application that empowers individuals to reduce food waste and contribute to a more sustainable future by effectively managing their food inventory.
+Start web app (new terminal):
 
-## Methods
+```bash
+npm --prefix client start
+```
 
-[Soon]
+By default, the client calls `http://localhost:4000`.  
+Override with `REACT_APP_API_URL`.
 
-## Expected Impacts
+## Validation Commands
 
-[Soon]
+Server smoke tests:
 
-## Getting Started
+```bash
+npm --prefix server test
+```
 
-To get started with Xpire, follow the installation and usage instructions below.
+Client unit tests:
 
-## Installation
+```bash
+CI=true npm --prefix client test -- --watchAll=false
+```
 
-[Soon]
+Client production build:
 
-## Usage
-
-[Soon]
-
-## Contributing
-
-We welcome contributions from the open-source community. If you'd like to contribute to Xpire, please follow these guidelines:
-
-1. Fork the repository and clone it to your local machine.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and test them thoroughly.
-4. Commit your changes with clear and concise messages.
-5. Push your changes to your forked repository.
-6. Submit a pull request to the main repository.
-
----
-
-## Contributors' Contacts
-
-### Fattah
-*   [LinkedIn](https://www.linkedin.com/in/muhammad24fattah/)
-*   [Email](fattahmuhammad666@gmail.com)
-### Dzikri
-*   LinkedIn
-*   [Email](dzkri.ardfi@gmail.com)
-### Indra
-*   LinkedIn
-*   [Email](indraakmal08@gmail.com) 
+```bash
+CI=true npm --prefix client run build
+```
